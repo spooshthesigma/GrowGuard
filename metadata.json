@@ -1,0 +1,6 @@
+{
+  "name": "GrowGuard",
+  "description": "A proposed smartphone operating system and integrated safety system designed specifically for young people under 18 — A Smartphone That Grows With You.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
