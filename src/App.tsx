@@ -19,7 +19,7 @@ export default function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '').toLowerCase();
-      if (['home', 'product', 'research', 'prototype', 'ai', 'about'].includes(hash)) {
+      if (['home', 'product', 'research', 'prototype', 'ai', 'safety', 'about'].includes(hash)) {
         setCurrentPage(hash as PageId);
       }
     };
