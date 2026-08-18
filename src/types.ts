@@ -1,4 +1,4 @@
-export type PageId = 'home' | 'product' | 'research' | 'prototype' | 'ai' | 'safety' | 'about';
+export type PageId = 'home' | 'product' | 'research' | 'prototype' | 'ai' | 'about' | 'safety-lab';
 
 export interface AgeStageData {
   age: number;
