@@ -8,6 +8,7 @@ import { ProductPage } from './pages/ProductPage';
 import { ResearchPage } from './pages/ResearchPage';
 import { PrototypePage } from './pages/PrototypePage';
 import { AiTechnologyPage } from './pages/AiTechnologyPage';
+import { SafetyLabPage } from './pages/SafetyLabPage';
 import { AboutPage } from './pages/AboutPage';
 
 export default function App() {
@@ -53,6 +54,7 @@ export default function App() {
         {currentPage === 'research' && <ResearchPage onNavigate={navigateTo} />}
         {currentPage === 'prototype' && <PrototypePage onNavigate={navigateTo} />}
         {currentPage === 'ai' && <AiTechnologyPage onNavigate={navigateTo} />}
+        {currentPage === 'safety' && <SafetyLabPage onNavigate={navigateTo} />}
         {currentPage === 'about' && (
           <AboutPage 
             onNavigate={navigateTo} 
