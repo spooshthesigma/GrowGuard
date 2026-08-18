@@ -27,14 +27,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const navLinks: { id: PageId; label: string; icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
-    { id: 'home', label: 'Home', icon: Smartphone },
-    { id: 'product', label: 'Product', icon: Layers },
-    { id: 'research', label: 'Research', icon: BookOpen },
-    { id: 'prototype', label: 'Prototype', icon: Smartphone },
-    { id: 'ai', label: 'AI Technology', icon: Cpu },
-    { id: 'about', label: 'About', icon: Info },
-  ];
+const navLinks: { id: PageId; label: string; icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
+  { id: 'home', label: 'Home', icon: Smartphone },
+  { id: 'product', label: 'Product', icon: Layers },
+  { id: 'research', label: 'Research', icon: BookOpen },
+  { id: 'prototype', label: 'Prototype', icon: Smartphone },
+  { id: 'ai', label: 'AI Technology', icon: Cpu },
+  { id: 'about', label: 'About', icon: Info },
+  { id: 'safety-lab', label: 'Safety Lab', icon: ShieldAlert },
+];
 
   const handleLinkClick = (pageId: PageId) => {
     onNavigate(pageId);
