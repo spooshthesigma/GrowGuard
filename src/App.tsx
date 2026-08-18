@@ -9,6 +9,7 @@ import { ResearchPage } from './pages/ResearchPage';
 import { PrototypePage } from './pages/PrototypePage';
 import { AiTechnologyPage } from './pages/AiTechnologyPage';
 import { AboutPage } from './pages/AboutPage';
+import { SafetyLabPage } from './pages/SafetyLabPage';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<PageId>('home');
@@ -60,6 +61,10 @@ export default function App() {
             onOpenPrivacyModal={() => setPrivacyModalOpen(true)}
           />
         )}
+        
+        {currentPage === 'safety-lab' && (
+  <SafetyLabPage onNavigate={navigateTo} />
+)}
       </main>
 
       <Footer
