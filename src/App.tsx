@@ -1,3 +1,4 @@
+// THIS IS THE CURRENT APP FILE
 import React, { useState, useEffect } from 'react';
 import { PageId } from './types';
 import { Navbar } from './components/Navbar';
