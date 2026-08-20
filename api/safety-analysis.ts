@@ -1,4 +1,3 @@
-````typescript
 import { GoogleGenAI } from '@google/genai';
 
 type RiskLevel =
@@ -1247,4 +1246,3 @@ The score must be an integer from 0 to 100.
     });
   }
 }
-````
