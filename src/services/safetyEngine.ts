@@ -72,28 +72,10 @@ const SIGNALS: Signal[] = [
       'The message encourages downloading an unknown file or application.'
   },
   {
-    name: 'Threat',
+    name: 'Threat or blackmail',
     points: 30,
     reason:
-      'The message uses a threat to pressure the recipient into doing something.'
-  },
-  {
-    name: 'Blackmail or coercion',
-    points: 35,
-    reason:
-      'The message threatens a consequence unless the recipient complies with a demand.'
-  },
-  {
-    name: 'Financial extortion',
-    points: 30,
-    reason:
-      'The message demands money or financial information using pressure or a threat.'
-  },
-  {
-    name: 'Private information threat',
-    points: 30,
-    reason:
-      'The message threatens to reveal private, embarrassing, or sensitive information.'
+      'The message uses threats, blackmail, or consequences to pressure the recipient.'
   }
 ];
 
@@ -127,7 +109,9 @@ const KEYWORDS: Record<string, string[]> = {
     'act now',
     'hurry',
     'or else',
-    'otherwise'
+    'otherwise',
+    'if you dont',
+    "if you don't"
   ],
 
   'Secrecy request': [
@@ -137,7 +121,9 @@ const KEYWORDS: Record<string, string[]> = {
     'our secret',
     'dont tell anyone',
     "don't tell anyone",
-    'keep this between us'
+    'keep this between us',
+    'darkest secret',
+    'secret'
   ],
 
   'Unknown contact': [
@@ -168,8 +154,10 @@ const KEYWORDS: Record<string, string[]> = {
     'give me $',
     'send me £',
     'send me $',
-    'pay up',
-    'transfer the money'
+    'give me 200 pounds',
+    'give me 200 pound',
+    'send me 200 pounds',
+    'send me 200 pound'
   ],
 
   'Suspicious download': [
@@ -180,67 +168,20 @@ const KEYWORDS: Record<string, string[]> = {
     'unknown file'
   ],
 
-  'Threat': [
-    'or else i will',
-    'or else i’ll',
-    'or else ill',
-    'i will tell everyone',
-    "i'll tell everyone",
-    'i will expose you',
-    "i'll expose you",
-    'i will reveal',
-    "i'll reveal",
-    'i will post your',
-    "i'll post your",
-    'i will share your',
-    "i'll share your",
-    'everyone will know',
-    'you will regret it',
-    'youll regret it',
-    "you'll regret it"
-  ],
-
-  'Blackmail or coercion': [
+  'Threat or blackmail': [
     'or else',
+    'otherwise',
+    'darkest secret',
+    'tell everyone',
+    'tell everybody',
+    'expose you',
+    'expose your',
+    'blackmail',
     'unless you',
     'if you dont',
     "if you don't",
-    'if you do not',
-    'do this or',
-    'give me or',
-    'pay me or',
-    'otherwise i will',
-    "otherwise i'll",
-    'otherwise ill',
-    'unless you give',
-    'unless you pay'
-  ],
-
-  'Financial extortion': [
-    'give me £',
-    'give me $',
-    'give me money',
-    'send me £',
-    'send me $',
-    'send me money',
-    'pay me',
-    'pay up',
-    'transfer me',
-    'transfer the money',
-    'give me the money'
-  ],
-
-  'Private information threat': [
-    'your darkest secret',
-    'your secret',
-    'your private information',
-    'your private messages',
-    'your photos',
-    'your pictures',
-    'your embarrassing secret',
-    'everyone will know',
-    'tell everyone your secret',
-    'post your secret'
+    'i will tell everyone',
+    'i will tell everybody'
   ]
 };
 
@@ -249,48 +190,10 @@ function containsAny(text: string, phrases: string[]): boolean {
 }
 
 /*
- * AGE-ADAPTIVE RISK
+ * Determines the inherent danger of the message.
  *
- * The base score represents the danger detected in the message.
- *
- * The age adjustment changes the displayed score according to the
- * user's developmental stage.
- *
- * IMPORTANT:
- * A high-risk message remains high-risk at every age.
- *
- * Age also affects the intervention separately, so younger users
- * can receive stronger protection even when the numerical score
- * is similar.
+ * This is calculated BEFORE age is considered.
  */
-function applyAgeAdjustment(baseScore: number, age: number): number {
-  let adjustment = 0;
-
-  if (age <= 7) {
-    adjustment = -6;
-  } else if (age <= 9) {
-    adjustment = -5;
-  } else if (age <= 11) {
-    adjustment = -3;
-  } else if (age <= 13) {
-    adjustment = -1;
-  } else if (age <= 15) {
-    adjustment = 1;
-  } else {
-    adjustment = 3;
-  }
-
-  /*
-   * Never allow age adjustment to turn a genuinely dangerous
-   * message into a low-risk result.
-   */
-  if (baseScore >= 75) {
-    return Math.max(75, Math.min(baseScore + adjustment, 100));
-  }
-
-  return Math.max(0, Math.min(baseScore + adjustment, 100));
-}
-
 function getRiskLevel(score: number): RiskLevel {
   if (score >= 75) return 'Critical';
   if (score >= 50) return 'Elevated';
@@ -298,29 +201,89 @@ function getRiskLevel(score: number): RiskLevel {
   return 'Low';
 }
 
+/*
+ * Age-adaptive scoring.
+ *
+ * The underlying danger of the message is calculated first.
+ * Younger users receive a higher final risk score because
+ * the same safety threat can be more significant for them.
+ *
+ * 7 years old  = +25%
+ * 9 years old  = +20%
+ * 11 years old = +15%
+ * 13 years old = +10%
+ * 15 years old = +5%
+ * 16–17        = no adjustment
+ *
+ * The final score is always capped at 100.
+ */
+function applyAgeAdjustment(baseScore: number, age: number): number {
+  const ageMultiplier =
+    age <= 7 ? 1.25 :
+    age <= 9 ? 1.20 :
+    age <= 11 ? 1.15 :
+    age <= 13 ? 1.10 :
+    age <= 15 ? 1.05 :
+    1.00;
+
+  return Math.min(
+    Math.round(baseScore * ageMultiplier),
+    100
+  );
+}
+
+/*
+ * Determines what GrowGuard should actually do.
+ *
+ * Age affects intervention as well as the final score.
+ */
 function getAction(score: number, age: number): SafetyAction {
   /*
-   * The score represents risk.
-   * Age controls the level of intervention.
-   *
-   * Younger users receive stronger intervention.
-   * Older teenagers receive more autonomy where appropriate.
+   * Extremely high risk.
    */
-
-  if (score >= 85) {
+  if (score >= 90) {
     return 'GUARDIAN_ALERT';
   }
 
-  if (score >= 65) {
-    return age <= 12 ? 'BLOCK' : 'WARN';
+  /*
+   * Critical / very high risk.
+   */
+  if (score >= 75) {
+    if (age <= 10) return 'GUARDIAN_ALERT';
+    if (age <= 13) return 'BLOCK';
+    if (age <= 15) return 'WARN';
+
+    return 'NUDGE';
   }
 
-  if (score >= 40) {
-    return age <= 13 ? 'WARN' : 'NUDGE';
+  /*
+   * Elevated risk.
+   */
+  if (score >= 50) {
+    if (age <= 10) return 'BLOCK';
+    if (age <= 13) return 'WARN';
+    if (age <= 15) return 'WARN';
+
+    return 'NUDGE';
   }
 
-  if (score >= 20) {
-    return age <= 11 ? 'WARN' : 'NUDGE';
+  /*
+   * Moderate risk.
+   */
+  if (score >= 25) {
+    if (age <= 10) return 'WARN';
+    if (age <= 13) return 'WARN';
+
+    return 'NUDGE';
+  }
+
+  /*
+   * Low risk.
+   */
+  if (score >= 15) {
+    if (age <= 10) return 'WARN';
+
+    return 'NUDGE';
   }
 
   return 'ALLOW';
@@ -330,18 +293,16 @@ export function analyzeMessage(
   message: string,
   age: number
 ): SafetyAnalysis {
-  const text = message.toLowerCase().trim();
+  const text = message.toLowerCase();
 
+  /*
+   * STEP 1
+   * Calculate the underlying risk of the message.
+   */
   let baseScore = 0;
 
   const reasons: string[] = [];
   const signals: string[] = [];
-
-  /*
-   * STEP 1
-   *
-   * Detect individual safety signals.
-   */
 
   SIGNALS.forEach((signal) => {
     const phrases = KEYWORDS[signal.name];
@@ -356,11 +317,7 @@ export function analyzeMessage(
 
   /*
    * STEP 2
-   *
-   * Detect combinations of signals.
-   *
-   * These combinations are important because several weak
-   * indicators together can represent a much more serious event.
+   * Detect combinations of dangerous signals.
    */
 
   const hasCredentialRequest = containsAny(
@@ -383,35 +340,19 @@ export function analyzeMessage(
     KEYWORDS['Secrecy request']
   );
 
-  const hasThreat = containsAny(
-    text,
-    KEYWORDS['Threat']
-  );
-
-  const hasBlackmail = containsAny(
-    text,
-    KEYWORDS['Blackmail or coercion']
-  );
-
   const hasPayment = containsAny(
     text,
     KEYWORDS['Payment request']
   );
 
-  const hasExtortion = containsAny(
+  const hasThreat = containsAny(
     text,
-    KEYWORDS['Financial extortion']
-  );
-
-  const hasPrivateInformationThreat = containsAny(
-    text,
-    KEYWORDS['Private information threat']
+    KEYWORDS['Threat or blackmail']
   );
 
   /*
    * Credential + urgency
    */
-
   if (hasCredentialRequest && hasUrgency) {
     baseScore += 15;
 
@@ -425,7 +366,6 @@ export function analyzeMessage(
   /*
    * Link + credential
    */
-
   if (hasLink && hasCredentialRequest) {
     baseScore += 20;
 
@@ -439,7 +379,6 @@ export function analyzeMessage(
   /*
    * Secrecy + meeting
    */
-
   if (
     hasSecrecy &&
     containsAny(text, [
@@ -459,134 +398,115 @@ export function analyzeMessage(
   }
 
   /*
-   * Threat + payment
-   *
-   * This is a particularly important combination because it can
-   * indicate financial extortion.
+   * Payment + urgency
    */
+  if (hasPayment && hasUrgency) {
+    baseScore += 15;
 
-  if (hasThreat && (hasPayment || hasExtortion)) {
-    baseScore += 25;
-
-    signals.push('Threat + financial demand combination');
+    signals.push('Payment + urgency combination');
 
     reasons.push(
-      'A financial demand combined with a threat is a strong indicator of coercion or extortion.'
+      'A payment request combined with time pressure is a strong manipulation indicator.'
     );
   }
 
   /*
-   * Blackmail + private information
+   * Payment + threat / blackmail
    */
+  if (hasPayment && hasThreat) {
+    baseScore += 20;
 
-  if (hasBlackmail && hasPrivateInformationThreat) {
-    baseScore += 25;
-
-    signals.push('Blackmail + private information combination');
+    signals.push('Payment + threat combination');
 
     reasons.push(
-      'A threat to reveal private information unless the recipient complies is a strong blackmail indicator.'
+      'A demand for money combined with a threat or blackmail attempt represents a significant manipulation risk.'
     );
   }
 
   /*
-   * Threat + blackmail + financial demand
-   *
-   * This catches messages such as:
-   *
-   * "Give me £200 or I'll tell everyone your secret."
+   * Threat + secrecy
    */
+  if (hasThreat && hasSecrecy) {
+    baseScore += 15;
 
-  if (
-    hasThreat &&
-    hasBlackmail &&
-    (hasPayment || hasExtortion)
-  ) {
-    baseScore += 30;
-
-    signals.push('High-confidence extortion pattern');
+    signals.push('Threat + secrecy combination');
 
     reasons.push(
-      'The message combines a demand for money with coercion and a threat, indicating a high-confidence extortion pattern.'
+      'Threatening someone while using secrecy or personal information increases the safety risk.'
     );
   }
 
   /*
-   * STEP 3
-   *
-   * Cap the underlying risk at 100.
+   * Keep the underlying score between 0 and 100.
    */
-
   baseScore = Math.min(baseScore, 100);
 
   /*
-   * STEP 4
+   * STEP 3
+   * Apply age-adaptive scoring.
    *
-   * Apply age adaptation.
+   * IMPORTANT:
+   * The same message can therefore have different
+   * scores for different ages.
    */
-
-  const score = applyAgeAdjustment(baseScore, age);
+  const score = applyAgeAdjustment(
+    baseScore,
+    age
+  );
 
   /*
-   * Explain the age adaptation.
+   * Add an explanation of the age adjustment.
    */
+  if (score !== baseScore) {
+    reasons.push(
+      `Age-adaptive protection adjusted the risk assessment for a ${age}-year-old user because younger users may require stronger protection from the same safety threat.`
+    );
 
-  if (baseScore > 0 && score !== baseScore) {
-    if (score < baseScore) {
-      reasons.push(
-        `The age-adaptive model adjusted the score for a ${age}-year-old user while keeping the underlying safety risk visible.`
-      );
-    } else {
-      reasons.push(
-        `The age-adaptive model increased the assessment for a ${age}-year-old user.`
-      );
-    }
-
-    signals.push('Age-adaptive assessment');
+    signals.push('Age-adaptive protection');
   }
 
   /*
-   * STEP 5
-   *
+   * STEP 4
    * Determine the final risk level.
    */
-
   const level = getRiskLevel(score);
 
   /*
-   * STEP 6
-   *
-   * Determine the appropriate intervention.
+   * STEP 5
+   * Determine the appropriate GrowGuard response.
    */
-
   const action = getAction(score, age);
 
+  /*
+   * STEP 6
+   * Explain the decision.
+   */
   let explanation = '';
 
   switch (action) {
     case 'ALLOW':
       explanation =
-        'No significant safety indicators were detected. GrowGuard allows the interaction normally.';
+        'The message presents a relatively low safety risk. GrowGuard allows the interaction normally while continuing to monitor for additional signals.';
       break;
 
     case 'NUDGE':
       explanation =
-        'Some safety indicators were detected. GrowGuard gives the young person a subtle reminder without interrupting the interaction.';
+        `The message presents some safety risk. For a ${age}-year-old user, GrowGuard provides a subtle warning or reminder while preserving independence.`;
       break;
 
     case 'WARN':
       explanation =
-        'Several safety indicators were detected. GrowGuard presents a clear warning and encourages the young person to reconsider the interaction.';
+        `The message presents a meaningful safety risk. For a ${age}-year-old user, GrowGuard shows a stronger warning and encourages the user to reconsider the interaction.`;
       break;
 
     case 'BLOCK':
       explanation =
-        'The interaction presents a significant safety risk for this age group. GrowGuard prevents the risky action and explains why.';
+        `The message presents a high safety risk for a ${age}-year-old user. GrowGuard prevents the risky action and explains why.`;
       break;
 
     case 'GUARDIAN_ALERT':
       explanation =
-        'A high-confidence safety risk was detected. GrowGuard escalates the event to the trusted guardian while providing an explanation.';
+        `The message presents a very high safety risk for a ${age}-year-old user. GrowGuard escalates the event to the trusted guardian because stronger protection is appropriate at this age.`;
       break;
   }
 
