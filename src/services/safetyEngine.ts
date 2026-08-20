@@ -339,8 +339,7 @@ const SIGNALS: Signal[] = [
     points: 25,
 
     reason:
-      'The message asks for the user's location, address or other information that could reveal where they are.',
-
+  "The message asks for the user's location, address or other information that could reveal where they are.",
     keywords: [
       'send me your location',
       'share your location',
