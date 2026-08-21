@@ -20,206 +20,68 @@ interface AIAnalysis {
   explanation: string;
 }
 
-/*
- * ============================================================
- * GROWGUARD AI SAFETY ANALYSIS
- * ============================================================
- *
- * Gemini analyses the meaning and context of the message.
- *
- * GrowGuard then:
- *
- * 1. Validates the AI response
- * 2. Protects against obviously under-scored serious threats
- * 3. Calculates the final risk level
- * 4. Applies age-adaptive intervention
- *
- * IMPORTANT:
- *
- * The SCORE represents the danger of the MESSAGE.
- *
- * AGE DOES NOT MAKE A DANGEROUS MESSAGE LESS DANGEROUS.
- *
- * Age affects the INTERVENTION.
- *
- * Therefore:
- *
- * Same message + younger user
- *     = same underlying danger
- *     + stronger protection
- *
- * Same message + older user
- *     = same underlying danger
- *     + more autonomy where appropriate
- *
- * ============================================================
- */
-
-
 /* ============================================================
- * BASIC HELPERS
- * ============================================================ */
+   BASIC HELPERS
+   ============================================================ */
 
 function clampScore(score: number): number {
-  return Math.max(
-    0,
-    Math.min(
-      100,
-      Math.round(score)
-    )
-  );
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
 
-
 function getRiskLevel(score: number): RiskLevel {
-
-  if (score >= 75) {
-    return 'Critical';
-  }
-
-  if (score >= 50) {
-    return 'Elevated';
-  }
-
-  if (score >= 25) {
-    return 'Moderate';
-  }
-
+  if (score >= 75) return 'Critical';
+  if (score >= 50) return 'Elevated';
+  if (score >= 25) return 'Moderate';
   return 'Low';
 }
 
-
 /* ============================================================
- * AGE-ADAPTIVE INTERVENTION
- * ============================================================
- *
- * IMPORTANT:
- *
- * Age does NOT change the danger score.
- *
- * It changes how GrowGuard responds.
- *
- * A 94/100 message is still 94/100 for every age.
- *
- * But:
- *
- * 10-year-old → stronger intervention
- * 14-year-old → strong warning
- * 17-year-old → warning / autonomy depending on context
- *
- * ============================================================
- */
+   AGE-ADAPTIVE ACTION
+   ============================================================ */
 
 function getAgeAppropriateAction(
   score: number,
   age: number
 ): SafetyAction {
 
-  /*
-   * CRITICAL RISK
-   *
-   * Extremely serious situations should never become
-   * a simple NUDGE just because the user is older.
-   */
-
   if (score >= 90) {
-
-    if (age <= 12) {
-      return 'GUARDIAN_ALERT';
-    }
-
-    if (age <= 15) {
-      return 'BLOCK';
-    }
-
+    if (age <= 12) return 'GUARDIAN_ALERT';
+    if (age <= 15) return 'BLOCK';
     return 'WARN';
   }
-
-
-  /*
-   * VERY HIGH RISK
-   */
 
   if (score >= 75) {
-
-    if (age <= 11) {
-      return 'GUARDIAN_ALERT';
-    }
-
-    if (age <= 14) {
-      return 'BLOCK';
-    }
-
+    if (age <= 11) return 'GUARDIAN_ALERT';
+    if (age <= 14) return 'BLOCK';
     return 'WARN';
   }
 
-
-  /*
-   * HIGH RISK
-   */
-
   if (score >= 60) {
-
-    if (age <= 12) {
-      return 'BLOCK';
-    }
-
-    if (age <= 15) {
-      return 'WARN';
-    }
-
+    if (age <= 12) return 'BLOCK';
+    if (age <= 15) return 'WARN';
     return 'NUDGE';
   }
-
-
-  /*
-   * MODERATE-HIGH RISK
-   */
 
   if (score >= 45) {
-
-    if (age <= 11) {
-      return 'BLOCK';
-    }
-
-    if (age <= 13) {
-      return 'WARN';
-    }
-
+    if (age <= 11) return 'BLOCK';
+    if (age <= 13) return 'WARN';
     return 'NUDGE';
   }
-
-
-  /*
-   * MODERATE RISK
-   */
 
   if (score >= 25) {
-
-    if (age <= 10) {
-      return 'WARN';
-    }
-
+    if (age <= 10) return 'WARN';
     return 'NUDGE';
   }
-
-
-  /*
-   * LOW RISK
-   */
 
   return 'ALLOW';
 }
 
-
 /* ============================================================
- * AGE EXPLANATION
- * ============================================================ */
+   AGE EXPLANATION
+   ============================================================ */
 
 function getAgeExplanation(age: number): string {
-
   if (age <= 11) {
-
     return (
       `The user is ${age}, so GrowGuard applies its strongest ` +
       `age-appropriate protective settings.`
@@ -227,7 +89,6 @@ function getAgeExplanation(age: number): string {
   }
 
   if (age <= 13) {
-
     return (
       `The user is ${age}, so GrowGuard applies stronger protective ` +
       `intervention while still allowing appropriate independence.`
@@ -235,7 +96,6 @@ function getAgeExplanation(age: number): string {
   }
 
   if (age <= 15) {
-
     return (
       `The user is ${age}, so GrowGuard preserves the seriousness ` +
       `of the risk while allowing more user autonomy where appropriate.`
@@ -248,38 +108,20 @@ function getAgeExplanation(age: number): string {
   );
 }
 
-
 /* ============================================================
- * TEXT NORMALISATION
- * ============================================================ */
+   TEXT NORMALISATION
+   ============================================================ */
 
-function normaliseText(
-  message: string
-): string {
-
+function normaliseText(message: string): string {
   return message
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-
 /* ============================================================
- * SAFETY FLOOR
- * ============================================================
- *
- * Gemini is very good at understanding context, but we don't want
- * the entire safety system to depend on one generated number.
- *
- * These are NOT the main detection system.
- *
- * They are safety floors.
- *
- * If a message is obviously a serious threat or coercive demand,
- * the AI cannot accidentally give it a tiny score.
- *
- * ============================================================
- */
+   SAFETY FLOOR
+   ============================================================ */
 
 function getSafetyFloor(
   message: string
@@ -289,139 +131,91 @@ function getSafetyFloor(
   reasons: string[];
 } {
 
-  const text =
-    normaliseText(
-      message
-    );
-
+  const text = normaliseText(message);
 
   let minimumScore = 0;
 
   const signals: string[] = [];
-
   const reasons: string[] = [];
 
-
-  /* ----------------------------------------------------------
-   * DIRECT THREAT
-   * ---------------------------------------------------------- */
+  /* DIRECT THREATS */
 
   const directThreatPatterns = [
-
     'i will kill you',
     "i'll kill you",
     'i am going to kill you',
     "i'm going to kill you",
-
     'i will murder you',
     "i'll murder you",
     'i am going to murder you',
     "i'm going to murder you",
-
     'i will hurt you',
     "i'll hurt you",
     'i am going to hurt you',
     "i'm going to hurt you",
-
     'you will die',
     'you are going to die',
-
     'kill you',
     'murder you'
   ];
-
 
   if (
     directThreatPatterns.some(
       phrase => text.includes(phrase)
     )
   ) {
+    minimumScore = Math.max(minimumScore, 85);
 
-    minimumScore =
-      Math.max(
-        minimumScore,
-        85
-      );
-
-    signals.push(
-      'Direct threat'
-    );
+    signals.push('Direct threat');
 
     reasons.push(
       'The message contains language indicating a direct threat of serious harm.'
     );
   }
 
-
-  /* ----------------------------------------------------------
-   * BLACKMAIL / EXTORTION
-   * ---------------------------------------------------------- */
+  /* BLACKMAIL / EXTORTION */
 
   const blackmailIndicators = [
-
     'give me £',
     'give me $',
     'give me money',
     'send me money',
     'pay me',
-
     'or i will tell everyone',
     "or i'll tell everyone",
-
     'or i will expose you',
     "or i'll expose you",
-
     'i will expose you',
     "i'll expose you",
-
     'tell everyone your secret',
     "i'll tell everyone your secret",
-
     'darkest secret',
-
     'give me what i want or else'
   ];
-
 
   const hasBlackmail =
     blackmailIndicators.some(
       phrase => text.includes(phrase)
     );
 
-
   const hasCoercion =
     text.includes('or else') ||
     text.includes('if you do not') ||
     text.includes("if you don't");
 
+  if (hasBlackmail && hasCoercion) {
+    minimumScore = Math.max(minimumScore, 75);
 
-  if (
-    hasBlackmail &&
-    hasCoercion
-  ) {
-
-    minimumScore =
-      Math.max(
-        minimumScore,
-        75
-      );
-
-    signals.push(
-      'Blackmail or extortion'
-    );
+    signals.push('Blackmail or extortion');
 
     reasons.push(
       'The message uses coercion or a threat to force the recipient to provide something or take an action.'
     );
   }
 
-
-  /* ----------------------------------------------------------
-   * STALKING / SURVEILLANCE
-   * ---------------------------------------------------------- */
+  /* STALKING / SURVEILLANCE */
 
   const stalkingIndicators = [
-
     'i am watching you',
     "i'm watching you",
     'i watch you every day',
@@ -436,35 +230,23 @@ function getSafetyFloor(
     'i know where you go'
   ];
 
-
   if (
     stalkingIndicators.some(
       phrase => text.includes(phrase)
     )
   ) {
+    minimumScore = Math.max(minimumScore, 80);
 
-    minimumScore =
-      Math.max(
-        minimumScore,
-        80
-      );
-
-    signals.push(
-      'Stalking or surveillance'
-    );
+    signals.push('Stalking or surveillance');
 
     reasons.push(
       'The message indicates surveillance, tracking or knowledge of the recipient’s whereabouts.'
     );
   }
 
-
-  /* ----------------------------------------------------------
-   * LOCATION + THREAT
-   * ---------------------------------------------------------- */
+  /* LOCATION + THREAT */
 
   const locationIndicators = [
-
     'your address',
     'where you live',
     'your house',
@@ -475,9 +257,7 @@ function getSafetyFloor(
     'your location'
   ];
 
-
   const threatIndicators = [
-
     'watch your back',
     'i am coming over',
     "i'm coming over",
@@ -487,46 +267,29 @@ function getSafetyFloor(
     'you will regret it'
   ];
 
-
   const hasLocation =
     locationIndicators.some(
       phrase => text.includes(phrase)
     );
-
 
   const hasThreateningLanguage =
     threatIndicators.some(
       phrase => text.includes(phrase)
     );
 
+  if (hasLocation && hasThreateningLanguage) {
+    minimumScore = Math.max(minimumScore, 85);
 
-  if (
-    hasLocation &&
-    hasThreateningLanguage
-  ) {
-
-    minimumScore =
-      Math.max(
-        minimumScore,
-        85
-      );
-
-    signals.push(
-      'Location + threatening behaviour'
-    );
+    signals.push('Location + threatening behaviour');
 
     reasons.push(
       'The message combines knowledge of the recipient’s location with threatening language.'
     );
   }
 
-
-  /* ----------------------------------------------------------
-   * FAKE EMERGENCY / POLICE THREAT
-   * ---------------------------------------------------------- */
+  /* FAKE EMERGENCY / POLICE */
 
   const emergencyIndicators = [
-
     'fake emergency',
     'fake police call',
     'call the police',
@@ -537,18 +300,12 @@ function getSafetyFloor(
     'fake emergency call'
   ];
 
-
   if (
     emergencyIndicators.some(
       phrase => text.includes(phrase)
     )
   ) {
-
-    minimumScore =
-      Math.max(
-        minimumScore,
-        70
-      );
+    minimumScore = Math.max(minimumScore, 70);
 
     signals.push(
       'Threat of emergency-service misuse'
@@ -559,13 +316,9 @@ function getSafetyFloor(
     );
   }
 
-
-  /* ----------------------------------------------------------
-   * FINANCIAL SCAM + PERSONAL INFORMATION
-   * ---------------------------------------------------------- */
+  /* FINANCIAL SCAM */
 
   const financialIndicators = [
-
     'credit card number',
     'debit card number',
     'bank details',
@@ -573,9 +326,7 @@ function getSafetyFloor(
     'payment details'
   ];
 
-
   const scamIndicators = [
-
     'lawsuit',
     'you are being sued',
     'your parents are being sued',
@@ -584,46 +335,29 @@ function getSafetyFloor(
     'send your parents'
   ];
 
-
   const hasFinancialRequest =
     financialIndicators.some(
       phrase => text.includes(phrase)
     );
-
 
   const hasScamThreat =
     scamIndicators.some(
       phrase => text.includes(phrase)
     );
 
+  if (hasFinancialRequest && hasScamThreat) {
+    minimumScore = Math.max(minimumScore, 75);
 
-  if (
-    hasFinancialRequest &&
-    hasScamThreat
-  ) {
-
-    minimumScore =
-      Math.max(
-        minimumScore,
-        75
-      );
-
-    signals.push(
-      'Financial scam or phishing'
-    );
+    signals.push('Financial scam or phishing');
 
     reasons.push(
       'The message combines a financial demand with a threatening or deceptive claim.'
     );
   }
 
-
-  /* ----------------------------------------------------------
-   * SERIOUS BULLYING / HARASSMENT
-   * ---------------------------------------------------------- */
+  /* SERIOUS BULLYING */
 
   const severeBullyingIndicators = [
-
     'everyone at school hates you',
     'stay home',
     'we are going to make your life',
@@ -634,18 +368,12 @@ function getSafetyFloor(
     'everyone will hate you'
   ];
 
-
   if (
     severeBullyingIndicators.some(
       phrase => text.includes(phrase)
     )
   ) {
-
-    minimumScore =
-      Math.max(
-        minimumScore,
-        55
-      );
+    minimumScore = Math.max(minimumScore, 55);
 
     signals.push(
       'Serious bullying or harassment'
@@ -656,7 +384,6 @@ function getSafetyFloor(
     );
   }
 
-
   return {
     minimumScore,
     signals,
@@ -664,64 +391,38 @@ function getSafetyFloor(
   };
 }
 
-
 /* ============================================================
- * SAFE JSON EXTRACTION
- * ============================================================ */
+   SAFE JSON EXTRACTION
+   ============================================================ */
 
 function extractJson(
   text: string
 ): AIAnalysis | null {
 
   try {
+    let cleaned = text.trim();
 
-    let cleaned =
-      text.trim();
+    cleaned = cleaned
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
 
-
-    /*
-     * Remove Markdown code fences if Gemini adds them.
-     */
-
-    cleaned =
-      cleaned
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/\s*```$/i, '')
-        .trim();
-
-
-    /*
-     * If Gemini included additional text around the JSON,
-     * attempt to isolate the first JSON object.
-     */
-
-    const firstBrace =
-      cleaned.indexOf('{');
-
-    const lastBrace =
-      cleaned.lastIndexOf('}');
-
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
 
     if (
       firstBrace !== -1 &&
       lastBrace !== -1 &&
       lastBrace > firstBrace
     ) {
-
-      cleaned =
-        cleaned.slice(
-          firstBrace,
-          lastBrace + 1
-        );
+      cleaned = cleaned.slice(
+        firstBrace,
+        lastBrace + 1
+      );
     }
 
-
-    const parsed =
-      JSON.parse(
-        cleaned
-      );
-
+    const parsed = JSON.parse(cleaned);
 
     if (
       typeof parsed.score !== 'number' ||
@@ -729,107 +430,59 @@ function extractJson(
       !Array.isArray(parsed.reasons) ||
       typeof parsed.explanation !== 'string'
     ) {
-
       return null;
     }
 
-
     return {
-
-      score:
-        clampScore(
-          parsed.score
-        ),
-
-      signals:
-        parsed.signals.map(
-          String
-        ),
-
-      reasons:
-        parsed.reasons.map(
-          String
-        ),
-
-      explanation:
-        parsed.explanation.trim()
+      score: clampScore(parsed.score),
+      signals: parsed.signals.map(String),
+      reasons: parsed.reasons.map(String),
+      explanation: parsed.explanation.trim()
     };
 
   } catch {
-
     return null;
   }
 }
 
-
 /* ============================================================
- * MAIN VERCEL SERVER FUNCTION
- * ============================================================ */
+   MAIN VERCEL SERVER FUNCTION
+   ============================================================ */
 
 export default async function handler(
   req: any,
   res: any
 ) {
 
-  /*
-   * ----------------------------------------------------------
-   * METHOD CHECK
-   * ----------------------------------------------------------
-   */
+  /* METHOD CHECK */
 
-  if (
-    req.method !== 'POST'
-  ) {
-
+  if (req.method !== 'POST') {
     return res.status(405).json({
-
-      error:
-        'Method not allowed'
-
+      error: 'Method not allowed'
     });
   }
 
-
   try {
 
-    /*
-     * --------------------------------------------------------
-     * READ REQUEST
-     * --------------------------------------------------------
-     */
+    /* READ REQUEST */
 
     const {
       message,
       age
-    } =
-      req.body ?? {};
+    } = req.body ?? {};
 
-
-    /*
-     * --------------------------------------------------------
-     * VALIDATE MESSAGE
-     * --------------------------------------------------------
-     */
+    /* VALIDATE MESSAGE */
 
     if (
       typeof message !== 'string' ||
       !message.trim()
     ) {
-
       return res.status(400).json({
-
-        error:
-          'A message is required.'
-
+        error: 'A message is required.'
       });
     }
 
-
-    /*
-     * --------------------------------------------------------
-     * VALIDATE AGE
-     * --------------------------------------------------------
-     */
+    /* VALIDATE AGE */
 
     if (
       typeof age !== 'number' ||
@@ -837,92 +490,54 @@ export default async function handler(
       age < 10 ||
       age > 17
     ) {
-
       return res.status(400).json({
-
-        error:
-          'Age must be a number between 10 and 17.'
-
+        error: 'Age must be a number between 10 and 17.'
       });
     }
 
+    const safeAge = Math.round(age);
 
-    const safeAge =
-      Math.round(age);
-
-
-    /*
-     * --------------------------------------------------------
-     * READ API KEY
-     * --------------------------------------------------------
-     *
-     * This MUST remain on the server.
-     *
-     * Never put the API key into VITE_ environment variables.
-     * --------------------------------------------------------
-     */
+    /* ========================================================
+       GET GEMINI API KEY
+       ======================================================== */
 
     const apiKey =
       process.env.GEMINI_API_KEY;
-
 
     if (
       !apiKey ||
       !apiKey.trim()
     ) {
-
       console.error(
-        'GEMINI_API_KEY is missing from the server environment.'
+        'GEMINI_API_KEY is missing from the Vercel server environment.'
       );
 
-
       return res.status(500).json({
-
         error:
-          'GEMINI_API_KEY is not configured on the server.'
-
+          'GEMINI_API_KEY is not configured on the server. Check Vercel Environment Variables.'
       });
     }
 
+    /* ========================================================
+       CREATE GEMINI CLIENT
+       ======================================================== */
 
-    /*
-     * --------------------------------------------------------
-     * CREATE GEMINI CLIENT
-     * --------------------------------------------------------
-     */
+    const ai = new GoogleGenAI({
+      apiKey: apiKey.trim()
+    });
 
-    const ai =
-      new GoogleGenAI({
-        apiKey: apiKey.trim()
-      });
-
-
-    /*
-     * --------------------------------------------------------
-     * RUN INDEPENDENT SAFETY FLOOR
-     * --------------------------------------------------------
-     *
-     * This runs before Gemini.
-     *
-     * Its purpose is to prevent an obviously serious message
-     * from receiving an absurdly low AI score.
-     * --------------------------------------------------------
-     */
+    /* ========================================================
+       SAFETY FLOOR
+       ======================================================== */
 
     const safetyFloor =
-      getSafetyFloor(
-        message
-      );
+      getSafetyFloor(message);
 
-
-    /*
-     * --------------------------------------------------------
-     * GEMINI PROMPT
-     * --------------------------------------------------------
-     */
+    /* ========================================================
+       GEMINI PROMPT
+       ======================================================== */
 
     const prompt = `
-
 You are the AI safety-analysis system inside GrowGuard.
 
 GrowGuard is an age-adaptive smartphone safety system for
@@ -969,25 +584,17 @@ MESSAGE:
 ${message}
 """
 
-
 CRITICAL SCORING RULE:
 
 The score represents the danger of the MESSAGE ITSELF.
 
 Age must NOT make a dangerous message safer.
 
-For example:
+A serious threat must receive a high score regardless of
+whether the user is 10, 14 or 17.
 
-"I will kill you"
-
-must receive a HIGH or VERY HIGH score regardless of whether
-the user is 10, 14 or 17.
-
-A threat does not become harmless because the recipient is older.
-
-Age is handled separately by GrowGuard when deciding the
-appropriate intervention.
-
+Age is handled separately by GrowGuard when deciding
+the appropriate intervention.
 
 SCORING:
 
@@ -1009,24 +616,22 @@ Very high safety concern.
 90-100
 Severe or highly credible safety concern.
 
-
 SERIOUS EXAMPLES:
 
 A direct threat of serious physical harm should normally be
 at least 80/100.
 
-A serious stalking or surveillance message should normally be
-at least 75/100.
+A serious stalking or surveillance message should normally
+be at least 75/100.
 
-A serious blackmail or extortion message should normally be
-at least 70/100.
+A serious blackmail or extortion message should normally
+be at least 70/100.
 
 A combination of threats and sensitive personal information
 should normally be very high risk.
 
 A financial phishing attempt using a threatening fake legal
 claim should normally be high risk.
-
 
 IMPORTANT:
 
@@ -1049,74 +654,74 @@ Use EXACTLY this structure:
 }
 
 The score must be an integer from 0 to 100.
-
 `;
 
+    /* ========================================================
+       CALL GEMINI
+       ======================================================== */
 
-    /*
-     * --------------------------------------------------------
-     * CALL GEMINI
-     * --------------------------------------------------------
-     */
+    let response;
 
-    const response =
-      await ai.models.generateContent({
+    try {
 
-        model:
-          'gemini-2.5-flash',
+      response =
+        await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt
+        });
 
-        contents:
-          prompt
+    } catch (geminiError) {
 
+      console.error(
+        'Gemini API error:',
+        geminiError
+      );
+
+      const message =
+        geminiError instanceof Error
+          ? geminiError.message
+          : String(geminiError);
+
+      return res.status(500).json({
+        error:
+          `Gemini API error: ${message}`
       });
+    }
 
+    /* ========================================================
+       GET RESPONSE TEXT
+       ======================================================== */
 
     const responseText =
       response.text ?? '';
 
+    console.log(
+      'Gemini response received.'
+    );
 
-    /*
-     * --------------------------------------------------------
-     * PARSE GEMINI RESULT
-     * --------------------------------------------------------
-     */
+    /* ========================================================
+       PARSE RESPONSE
+       ======================================================== */
 
     const aiResult =
-      extractJson(
-        responseText
-      );
+      extractJson(responseText);
 
-
-    if (
-      !aiResult
-    ) {
+    if (!aiResult) {
 
       console.error(
         'Gemini returned invalid JSON:',
         responseText
       );
 
-
       return res.status(500).json({
-
         error:
-          'The AI returned an invalid safety analysis.'
-
+          'Gemini returned an invalid safety analysis.'
       });
     }
 
-
-    /*
-     * --------------------------------------------------------
-     * COMBINE GEMINI + SAFETY FLOOR
-     * --------------------------------------------------------
-     *
-     * Gemini provides contextual intelligence.
-     *
-     * The safety floor prevents obvious serious cases from
-     * accidentally receiving an extremely low score.
-     * --------------------------------------------------------
-     */
+    /* ========================================================
+       COMBINE GEMINI + SAFETY FLOOR
+       ======================================================== */
 
     const finalScore =
       clampScore(
@@ -1126,24 +731,16 @@ The score must be an integer from 0 to 100.
         )
       );
 
-
-    /*
-     * --------------------------------------------------------
-     * FINAL RISK LEVEL
-     * --------------------------------------------------------
-     */
+    /* ========================================================
+       RISK LEVEL
+       ======================================================== */
 
     const finalLevel =
-      getRiskLevel(
-        finalScore
-      );
+      getRiskLevel(finalScore);
 
-
-    /*
-     * --------------------------------------------------------
-     * FINAL AGE-ADAPTIVE ACTION
-     * --------------------------------------------------------
-     */
+    /* ========================================================
+       AGE-ADAPTIVE ACTION
+       ======================================================== */
 
     const finalAction =
       getAgeAppropriateAction(
@@ -1151,12 +748,9 @@ The score must be an integer from 0 to 100.
         safeAge
       );
 
-
-    /*
-     * --------------------------------------------------------
-     * COMBINE SIGNALS
-     * --------------------------------------------------------
-     */
+    /* ========================================================
+       COMBINE SIGNALS
+       ======================================================== */
 
     const combinedSignals =
       Array.from(
@@ -1166,59 +760,43 @@ The score must be an integer from 0 to 100.
         ])
       );
 
-
-    /*
-     * --------------------------------------------------------
-     * COMBINE REASONS
-     * --------------------------------------------------------
-     */
+    /* ========================================================
+       COMBINE REASONS
+       ======================================================== */
 
     const combinedReasons =
       Array.from(
         new Set([
           ...safetyFloor.reasons,
           ...aiResult.reasons,
-          getAgeExplanation(
-            safeAge
-          )
+          getAgeExplanation(safeAge)
         ])
       );
 
-
-    /*
-     * --------------------------------------------------------
-     * FINAL EXPLANATION
-     * --------------------------------------------------------
-     */
+    /* ========================================================
+       FINAL EXPLANATION
+       ======================================================== */
 
     const explanation =
       `${aiResult.explanation} ` +
       `GrowGuard assessed the message at ${finalScore}/100. ` +
       `${getAgeExplanation(safeAge)}`;
 
-
-    /*
-     * --------------------------------------------------------
-     * RETURN RESULT
-     * --------------------------------------------------------
-     */
+    /* ========================================================
+       RETURN RESULT
+       ======================================================== */
 
     return res.status(200).json({
 
-      score:
-        finalScore,
+      score: finalScore,
 
-      level:
-        finalLevel,
+      level: finalLevel,
 
-      action:
-        finalAction,
+      action: finalAction,
 
-      signals:
-        combinedSignals,
+      signals: combinedSignals,
 
-      reasons:
-        combinedReasons,
+      reasons: combinedReasons,
 
       explanation
 
@@ -1226,22 +804,24 @@ The score must be an integer from 0 to 100.
 
   } catch (error) {
 
-    /*
-     * --------------------------------------------------------
-     * SERVER ERROR
-     * --------------------------------------------------------
-     */
+    /* ========================================================
+       ACTUAL ERROR REPORTING
+       ======================================================== */
 
     console.error(
       'Safety analysis error:',
       error
     );
 
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : String(error);
 
     return res.status(500).json({
 
       error:
-        'Safety analysis failed.'
+        `Safety analysis failed: ${errorMessage}`
 
     });
   }
